@@ -77,6 +77,37 @@ services:
     networks:
       - marketplace-net
 
+  auth-service:
+    build: ./auth-service
+    image: marketplace/auth-service:1.0
+    container_name: auth-service
+    restart: unless-stopped
+    environment:
+      PORT: 8084
+      DB_HOST: ${DB_HOST:-mysql}
+      DB_PORT: ${DB_PORT:-3306}
+      DB_NAME: ${DB_NAME:-marketplace}
+      DB_USER: ${DB_USER:-marketplace}
+      DB_PASSWORD: ${DB_PASSWORD}
+      USER_SERVICE_URL: http://user-service:8081
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
+      JWT_EXPIRY_SECONDS: ${JWT_EXPIRY_SECONDS:-3600}
+    ports:
+      - "8084:8084"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      user-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8084/actuator/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 40s
+    networks:
+      - marketplace-net
+
   inventory-service:
     build: ./inventory-service
     image: marketplace/inventory-service:1.0
